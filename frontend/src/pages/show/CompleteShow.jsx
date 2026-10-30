@@ -152,6 +152,7 @@ function CompleteShow() {
                         <option value="">All Account Types</option>
                         <option value="Savings">Savings</option>
                         <option value="Current">Current</option>
+                        <option value="Salary">Salary</option>
 
                     </select>
 
