@@ -7,6 +7,9 @@ import pandas as pd
 from io import BytesIO
 from login import router as login_router
 from chatbot import router as chatbot_router
+from fastapi import Query
+from typing import Optional
+import re
 
 app = fastapi.FastAPI()
 app.include_router(chatbot_router)
@@ -39,6 +42,67 @@ def generate_account_id() -> int:
         sort=[("account_id", -1)]
     )
     return (latest_customer.get("account_id", 0) if latest_customer else 0) + 1
+
+#Search the customers with the credentials 
+@app.get("/customers/search")
+def search_customers(
+    search: Optional[str] = None,
+    account_type : Optional[str] = None,
+    status: Optional[str] =None,
+    page:int = Query(1, ge=1),
+    limit:int = Query(10, ge=1, le=100)
+):
+    try:
+        query= {}
+
+        if search and search.strip():
+            search_value = search.strip()
+            search_conditions=[
+                {
+                    "name":{
+                        "$regex": re.escape(search_value),
+                        "$options":"i"
+                    }
+                }
+            ]
+
+            #Account id is numeric in this projcet
+            if search_value.isdigit():
+                search_conditions.append({
+                    "account_id":int(search_value)
+                })
+            query["$or"] = search_conditions
+
+        if account_type:
+            query["account_type"] = account_type
+
+        if status:
+            query["status"] = status.upper()
+
+        total = customers.count_documents(query)
+
+        skip = (page -1)*limit
+
+        customer_list = list(
+            customers.find(query,{"_id":0})
+            .sort("account_id",1)
+            .skip(skip)
+            .limit(limit)
+        )
+
+        return{
+            "success" : True,
+            "total" : total,
+            "page" : page,
+            "limit" : limit,
+            "total_pages": (total + limit - 1)//limit,
+            "customers": customer_list
+        }
+    except Exception as e:
+        return{
+            "success" : False,
+            "message" : str(e)
+        }
 
 
 # GET NEXT ACCOUNT ID
@@ -439,7 +503,119 @@ def update_personal_details(
 #customer and personal details aggregation codes
 #===============================================================================================================================
 
+@app.get("/customer/personal_details/search")
+def search_complete_customers(
+    search: Optional[str] = None,
+    account_type: Optional[str] = None,
+    status: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100)
+):
+    try:
+        match_query = {}
 
+        # Search by name or account ID
+        if search and search.strip():
+            value = search.strip()
+
+            conditions = [
+                {
+                    "name": {
+                        "$regex": re.escape(value),
+                        "$options": "i"
+                    }
+                }
+            ]
+
+            if value.isdigit():
+                conditions.append({
+                    "account_id": int(value)
+                })
+
+            match_query["$or"] = conditions
+
+        # Account type filter
+        if account_type:
+            match_query["account_type"] = account_type
+
+        # Status filter
+        if status:
+            match_query["status"] = status.upper()
+
+        # Combine customer and personal details
+        pipeline = [
+            {
+                "$lookup": {
+                    "from": "personal_details",
+                    "localField": "account_id",
+                    "foreignField": "account_id",
+                    "as": "personal"
+                }
+            },
+            {
+                "$unwind": "$personal"
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "account_id": 1,
+                    "name": 1,
+                    "age": 1,
+                    "account_type": 1,
+                    "balance": 1,
+                    "status": 1,
+                    "aadhaar_no": "$personal.aadhaar_no",
+                    "address": "$personal.address",
+                    "pincode": "$personal.pincode"
+                }
+            },
+            {
+                "$match": match_query
+            },
+            {
+                "$sort": {"account_id": 1}
+            }
+        ]
+
+        # Count matching records
+        count_pipeline = pipeline + [
+            {"$count": "total"}
+        ]
+
+        count_result = list(
+            customers.aggregate(count_pipeline)
+        )
+
+        total = count_result[0]["total"] if count_result else 0
+
+        # Pagination
+        skip = (page - 1) * limit
+
+        data_pipeline = pipeline + [
+            {"$skip": skip},
+            {"$limit": limit}
+        ]
+
+        result = list(
+            customers.aggregate(data_pipeline)
+        )
+
+        return {
+            "success": True,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": (total + limit - 1) // limit,
+            "customers": result
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "message": str(e)
+        }
+
+    
 @app.get("/customer/personal_details/active")
 def get_all_active_customer_details():
     active_data = customers.aggregate([

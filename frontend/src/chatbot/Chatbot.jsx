@@ -42,7 +42,6 @@ const DOUBT_SUGGESTIONS = [
 ];
 
 const ACCOUNT_TYPES = ["Savings", "Current", "Salary"];
-
 const DEFAULT_SUGGESTIONS = [
     "Open a new bank account",
     "What are the account types available?",
@@ -739,7 +738,7 @@ function Chatbot() {
         }
     };
 
-    // Existing FastAPI FAQ/chat functionality.
+    // Existing FastAPI FAQ/chat functionality + customer data projection.
     const sendQuery = useCallback(async (textToSend) => {
         const text = (textToSend || "").trim();
 
@@ -751,6 +750,31 @@ function Chatbot() {
         setSuggestions([]);
 
         try {
+            const query = text.toLowerCase();
+
+            // Only personal-account questions should use the projection API.
+            // General questions such as "minimum balance requirement" stay in FAQ.
+            const isProjectionQuestion =
+                /\b(my|my current|check my|show my|what is my|tell me my)\b.*\b(balance|account|details|status|id|number|type)\b/.test(query) ||
+                /\b(account balance|my balance|check balance|show balance|balance in my account)\b/.test(query) ||
+                /\b(my account details|show my details|customer information|my account status|my account type|my account id|my account number)\b/.test(query);
+
+            if (isProjectionQuestion) {
+                const answer = await getCustomerProjection(text);
+
+                if (answer) {
+                    addBotMessage(answer);
+                    setSuggestions([
+                        "Show my account details",
+                        "What is my account balance?",
+                        "What is my account type?",
+                        "What is my account status?"
+                    ]);
+                    return;
+                }
+            }
+
+            // Normal banking FAQ request.
             const response = await API.post("/chat", {
                 message: text
             });
@@ -774,7 +798,7 @@ function Chatbot() {
             console.error("Chatbot query error:", error);
 
             addBotMessage(
-                "Unable to reach the backend server right now. Please check your connection or try a suggested question."
+                "Unable to retrieve the requested information right now. Please check your connection or try again."
             );
 
             setSuggestions(getContextualSuggestions(text));
@@ -901,6 +925,89 @@ function Chatbot() {
         setAccountFlow(INITIAL_FLOW_STATE);
     };
 
+
+    // Retrieve the logged-in customer's projected account information.
+    const getCustomerProjection = async (question) => {
+        // Router state is supported as a fallback for the existing login flow.
+        const accountId =
+            sessionStorage.getItem("accountId") ||
+            location.state?.accountId ||
+            location.state?.account_id;
+
+        if (!accountId) {
+            return "Please log in to view your account information. Your account ID was not found in the current login session.";
+        }
+
+        try {
+            const response = await API.get(
+                `/customer/personal_details/read/${encodeURIComponent(accountId)}`
+            );
+
+            const data = response.data;
+            const query = (question || "").toLowerCase();
+            const formattedBalance = Number(data.balance || 0).toLocaleString("en-IN");
+
+            if (
+                query.includes("balance") ||
+                query.includes("amount")
+            ) {
+                return `Hello ${data.name}! Your current account balance is ₹${formattedBalance}.`;
+            }
+
+            if (
+                query.includes("account type") ||
+                query.includes("type of account")
+            ) {
+                return `Hello ${data.name}! Your account type is ${data.account_type}.`;
+            }
+
+            if (query.includes("status")) {
+                return `Hello ${data.name}! Your account status is ${data.status || "Not available"}.`;
+            }
+
+            if (
+                query.includes("account id") ||
+                query.includes("account number")
+            ) {
+                return `Hello ${data.name}! Your account ID is ${data.account_id}.`;
+            }
+
+            if (
+                query.includes("account details") ||
+                query.includes("my details") ||
+                query.includes("customer information")
+            ) {
+                return `Here are your account details:
+
+` +
+                    `Name: ${data.name || "Not available"}
+` +
+                    `Account ID: ${data.account_id || accountId}
+` +
+                    `Age: ${data.age ?? "Not available"}
+` +
+                    `Account Type: ${data.account_type || "Not available"}
+` +
+                    `Balance: ₹${formattedBalance}
+` +
+                    `Status: ${data.status || "Not available"}`;
+            }
+
+            return null;
+        } catch (error) {
+            console.error("Customer projection error:", error);
+
+            const detail = error.response?.data?.detail;
+            if (detail) {
+                return typeof detail === "string"
+                    ? detail
+                    : "Your account information could not be found. Please check your login or contact support.";
+            }
+
+            return "Sorry, I couldn't retrieve your account information. Please try again.";
+        }
+    };
+
     // Determine appropriate input placeholder based on current state
     const getInputPlaceholder = () => {
         if (!accountFlow.active) {
@@ -960,9 +1067,7 @@ function Chatbot() {
                                 <h3>Banking Support</h3>
                                 <div className="chatbot-status-row">
                                     <span className="online-indicator"></span>
-                                    <small>
-                                        Customer assistance • Online
-                                    </small>
+                                    <small>Customer assistance • Online</small>
                                 </div>
                             </div>
                         </div>
@@ -1008,40 +1113,31 @@ function Chatbot() {
                             </div>
                         ))}
 
-                        {messages.length === 1 &&
-                            suggestions.length === 0 && (
-                                <div className="chatbot-doubt-section">
-                                    <span className="doubt-section-title">
-                                        Quick Banking Actions & Queries
-                                    </span>
+                        {messages.length === 1 && suggestions.length === 0 && (
+                            <div className="chatbot-doubt-section">
+                                <span className="doubt-section-title">
+                                    Quick Banking Actions & Queries
+                                </span>
 
-                                    <div className="doubt-chips">
-                                        {DOUBT_SUGGESTIONS.map(
-                                            (sug, idx) => (
-                                                <button
-                                                    key={idx}
-                                                    type="button"
-                                                    className="doubt-chip"
-                                                    onClick={() =>
-                                                        sendDirectMessage(
-                                                            sug.query
-                                                        )
-                                                    }
-                                                    disabled={loading}
-                                                    title={`Ask: ${sug.query}`}
-                                                >
-                                                    <span className="doubt-chip-label">
-                                                        {sug.label}
-                                                    </span>
-                                                    <span className="doubt-chip-arrow">
-                                                        →
-                                                    </span>
-                                                </button>
-                                            )
-                                        )}
-                                    </div>
+                                <div className="doubt-chips">
+                                    {DOUBT_SUGGESTIONS.map((sug, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            className="doubt-chip"
+                                            onClick={() => sendDirectMessage(sug.query)}
+                                            disabled={loading}
+                                            title={`Ask: ${sug.query}`}
+                                        >
+                                            <span className="doubt-chip-label">
+                                                {sug.label}
+                                            </span>
+                                            <span className="doubt-chip-arrow">→</span>
+                                        </button>
+                                    ))}
                                 </div>
-                            )}
+                            </div>
+                        )}
 
                         {suggestions.length > 0 && !loading && (
                             <div className="suggestion-container">
@@ -1056,21 +1152,15 @@ function Chatbot() {
                                         key={index}
                                         type="button"
                                         className="suggestion-tile"
-                                        onClick={() =>
-                                            sendDirectMessage(suggestion)
-                                        }
+                                        onClick={() => sendDirectMessage(suggestion)}
                                         disabled={loading}
                                         title={`Select: ${suggestion}`}
                                     >
-                                        <span className="suggestion-tile-icon">
-                                            
-                                        </span>
+                                        <span className="suggestion-tile-icon"></span>
                                         <span className="suggestion-tile-text">
                                             {suggestion}
                                         </span>
-                                        <span className="suggestion-tile-arrow">
-                                            →
-                                        </span>
+                                        <span className="suggestion-tile-arrow">→</span>
                                     </button>
                                 ))}
                             </div>
@@ -1081,26 +1171,19 @@ function Chatbot() {
                                 <span className="typing-dot"></span>
                                 <span className="typing-dot"></span>
                                 <span className="typing-dot"></span>
-                                <span className="typing-text">
-                                    Processing...
-                                </span>
+                                <span className="typing-text">Processing...</span>
                             </div>
                         )}
 
                         <div ref={messagesEndRef}></div>
                     </div>
 
-                    <form
-                        className="chatbot-input"
-                        onSubmit={sendMessage}
-                    >
+                    <form className="chatbot-input" onSubmit={sendMessage}>
                         <input
                             ref={inputRef}
                             type="text"
                             value={message}
-                            onChange={(event) =>
-                                setMessage(event.target.value)
-                            }
+                            onChange={(event) => setMessage(event.target.value)}
                             placeholder={getInputPlaceholder()}
                             maxLength={2000}
                             aria-label="Your message"

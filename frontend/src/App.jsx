@@ -38,7 +38,35 @@ import "./App.css";
 function AppContent() {
     const location = useLocation();
     const isLoginPage = location.pathname === "/login";
+    const pages = [
+    { name: "New Account Creation", path: "/customer/collection" },
+    { name: "Personal Details Collection", path: "/collection/personal" },
+    { name: "Customers Data", path: "/show/customer" },
+    { name: "Personal Details Dataa", path: "/show/personal" },
+    { name: "Complete Customer Details", path: "/combined/complete-data" },
 
+    { name: "Block Customer", path: "/status/block" },
+    { name: "Unblock Customer", path: "/status/unblock" },
+    { name: "Deactivate Customer", path: "/status/deactivate" },
+
+    { name: "Customer Update", path: "/update/customerupdate" },
+    { name: "Personal Details Update", path: "/update/personaldetailsupdate" },
+
+    { name: "Combined Features", path: "/combined" },
+    { name: "Account Type", path: "/combined/account-type" },
+    { name: "Active Customers", path: "/combined/active" },
+    { name: "Average Balance", path: "/combined/average-balance" },
+    { name: "Complete Details", path: "/combined/complete-details" },
+    { name: "Balance Above", path: "/combined/balance-above" },
+    { name: "Balance Below", path: "/combined/balance-below" },
+    { name: "High Low Balance", path: "/combined/high-low" },
+    { name: "Status Count", path: "/combined/status-count" },
+    { name: "Top Accounts", path: "/combined/top-accounts" },
+    { name: "Total Balance", path: "/combined/total-balance" },
+    
+    { name: "Balance Chart", path: "/chart" },
+    { name: "Chatbot Support", path: "/chatbot" }
+];
     return (
         <>
             {!isLoginPage && <Navbar />}
