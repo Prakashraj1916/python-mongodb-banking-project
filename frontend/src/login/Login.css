@@ -1,0 +1,176 @@
+/* ==========================================================================
+   BANKING SERVICE - LOGIN ACCESS CARD
+   ========================================================================== */
+
+.login-page {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    box-sizing: border-box;
+    background: #5f82da;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    padding: 40px 36px;
+    box-sizing: border-box;
+    background: #a7b3e6;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
+    text-align: left;
+}
+
+/* Bank Header */
+.login-header {
+    text-align: center;
+    margin-bottom: 28px;
+}
+
+.bank-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 12px;
+    border-radius: 12px;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #162d79;
+}
+
+.bank-icon svg {
+    width: 26px;
+    height: 26px;
+}
+
+.login-header h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.login-subtitle {
+    margin: 6px 0 0 0;
+    color: #04070b;
+    font-size: 14px;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 7px;
+    color: #3f4183;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 15px;
+    color: #ebecee;
+    background: #3d4b75;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    font-family: inherit;
+}
+
+.form-group input::placeholder {
+    color: #e8e8e8;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #bbc2d0;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Password with Toggle */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper input {
+    padding-right: 64px;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #a0adbe;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: color 0.15s ease;
+}
+
+.toggle-password:hover {
+    color: #f9f9fb;
+}
+
+/* Error Message */
+.login-error {
+    margin-bottom: 18px;
+    padding: 11px 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    color: #b91c1c;
+    font-size: 13.5px;
+    line-height: 1.4;
+}
+
+/* Login Button */
+.login-btn {
+    width: 100%;
+    margin-top: 6px;
+    padding: 13px;
+    border: none;
+    border-radius: 8px;
+    background: #1e40af;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.05s ease;
+    font-family: inherit;
+}
+
+.login-btn:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.login-btn:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.login-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .login-card {
+        padding: 28px 22px;
+    }
+}
